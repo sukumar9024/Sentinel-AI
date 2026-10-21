@@ -1,0 +1,45 @@
+groups:
+  - name: sentinel-platform
+    rules:
+      - alert: SentinelQueueBacklog
+        expr: sentinel_queue_depth > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Sentinel event queue is growing
+      - alert: SentinelDeadLetters
+        expr: sentinel_dead_letters > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Events require parser or rule investigation
+      - alert: SentinelPipelineStale
+        expr: sentinel_pipeline_heartbeat_age_seconds > 30 or sentinel_pipeline_heartbeat_age_seconds < 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Pipeline worker heartbeat is missing
+      - alert: SentinelIntegrationsStale
+        expr: sentinel_integrations_heartbeat_age_seconds > 180 or sentinel_integrations_heartbeat_age_seconds < 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Integration worker needs attention
+      - alert: SentinelAPIUnavailable
+        expr: up{job="sentinel"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Sentinel API or metrics proxy unavailable
+      - alert: SentinelIntegrationFailures
+        expr: sentinel_integration_failures > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Search AI or notification deliveries exhausted retries

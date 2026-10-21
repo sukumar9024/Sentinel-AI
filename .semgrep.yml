@@ -1,0 +1,28 @@
+rules:
+  - id: no-shell-execution
+    languages: [python]
+    severity: ERROR
+    message: Use an argument list and avoid invoking a shell with log-derived data.
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run(..., shell=True, ...)
+          - pattern: subprocess.Popen(..., shell=True, ...)
+  - id: no-unsafe-yaml
+    languages: [python]
+    severity: ERROR
+    message: Detection rules must use safe YAML loading.
+    pattern: yaml.unsafe_load(...)
+  - id: no-disabled-tls-verification
+    languages: [python]
+    severity: ERROR
+    message: Verify TLS for outbound integrations.
+    pattern-either:
+      - pattern: httpx.Client(..., verify=False, ...)
+      - pattern: requests.get(..., verify=False, ...)
+  - id: no-executable-log-evidence
+    languages: [python]
+    severity: ERROR
+    message: Never execute untrusted log or model content.
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)

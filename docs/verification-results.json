@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-16",
+  "backend_tests_passed": 68,
+  "browser_workflows_passed": 2,
+  "frontend_build": "passed",
+  "python_lint": "passed",
+  "terraform_validation": "passed",
+  "compose_smoke": [
+    "collector",
+    "opensearch",
+    "correlation",
+    "worker_restart",
+    "duplicate_replay"
+  ],
+  "failure_drill": [
+    "search_outage_fallback",
+    "redis_fail_closed",
+    "postgres_restart",
+    "broker_loss_reconciliation"
+  ],
+  "postgres_restore": {
+    "events": 2266,
+    "incidents": 5,
+    "alerts": 31,
+    "notes": 3,
+    "audit_logs": 42
+  },
+  "opensearch_restore": {
+    "snapshot": "verify-df6022e38701",
+    "original_events": 2266,
+    "restored_events": 2266
+  },
+  "benchmark": {
+    "events": 1000,
+    "ingestion_seconds": 0.875,
+    "accepted_eps": 1142.76,
+    "batch_p95_seconds": 0.193,
+    "end_to_end_seconds": 11.0,
+    "scope": "local burst, not sustained capacity"
+  },
+  "backend_image_id": "sha256:07ef854851c544ac7ccffe0e3ca8f04dbbfd651f4f6c90945a18f69adfb332a0",
+  "backend_image_high_critical_vulnerabilities": 0,
+  "filesystem_high_critical_vulnerabilities": 0,
+  "filesystem_high_critical_misconfigurations": 0,
+  "filesystem_secrets": 0,
+  "standalone_iac_reviewed_findings": [
+    "AWS-0053: intended public TLS ALB",
+    "AWS-0104: outbound HTTPS; production egress restriction gate"
+  ],
+  "dependency_audits": "no known vulnerabilities reported",
+  "semgrep": "4 local rules, zero findings",
+  "aws_login": false,
+  "terraform_plan_or_apply": false,
+  "cloud_resources_created": false,
+  "live_ai_or_external_notifications": "disabled; adapter tests use local doubles"
+}

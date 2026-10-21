@@ -1,0 +1,11 @@
+region = "ap-south-2"
+environment = "dev"
+allow_paid_resources = false
+# Keep the cost gate false until deployment and its budget are explicitly authorized.
+# Supply immutable ECR digests and an existing validated ACM certificate before enabling resources.
+backend_image = ""
+frontend_image = ""
+certificate_arn = ""
+dns_zone_id = ""
+domain_name = ""
+github_repository = ""

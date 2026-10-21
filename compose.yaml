@@ -1,0 +1,177 @@
+name: sentinel-ai
+x-app: &app
+  build:
+    context: .
+    dockerfile: docker/backend.Dockerfile
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+psycopg://sentinel:${POSTGRES_PASSWORD:?Run bootstrap first}@postgres:5432/sentinel
+    REDIS_URL: redis://redis:6379/0
+    OPENSEARCH_URL: http://opensearch:9200
+    OLLAMA_URL: http://host.docker.internal:11434
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  networks: [data]
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+services:
+  api:
+    <<: *app
+    networks: [edge, data]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  worker:
+    <<: *app
+    command: [python, -m, sentinel.worker]
+    depends_on:
+      api:
+        condition: service_healthy
+  integrations:
+    <<: *app
+    command: [python, -m, sentinel.integration_worker]
+    networks: [data, outbound]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    depends_on:
+      api:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+  maintenance:
+    <<: *app
+    command: [python, -m, sentinel.maintenance_worker]
+    depends_on:
+      api:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+  sample-app:
+    <<: *app
+    command: [uvicorn, sentinel.sample_app:app, --host, "0.0.0.0", --port, "8001"]
+    volumes: [lab-logs:/logs]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  collector:
+    image: cr.fluentbit.io/fluent/fluent-bit:4.2.3
+    user: "10001:10001"
+    env_file: .env
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - lab-logs:/logs
+      - ./logging/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./logging/parsers.conf:/fluent-bit/etc/parsers-sentinel.conf:ro
+    networks: [data]
+    depends_on:
+      sample-app:
+        condition: service_healthy
+  opensearch:
+    image: opensearchproject/opensearch:3.3.2
+    environment:
+      discovery.type: single-node
+      path.repo: /usr/share/opensearch/data/snapshots
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    volumes: [search-data:/usr/share/opensearch/data]
+    networks: [data]
+    mem_limit: 1500m
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://localhost:9200/_cluster/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    ports: ["127.0.0.1:8180:8080"]
+    networks: [edge]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      api:
+        condition: service_healthy
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: sentinel
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run bootstrap first}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    networks: [data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U sentinel -d sentinel"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  redis:
+    image: redis:7.4-alpine
+    command: [redis-server, --appendonly, "yes", --appendfsync, everysec]
+    volumes: [redis-data:/data]
+    networks: [data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  metrics-proxy:
+    image: nginxinc/nginx-unprivileged:1.28-alpine
+    env_file: .env
+    environment:
+      NGINX_ENVSUBST_FILTER: COLLECTOR_KEY
+    volumes:
+      - ./monitoring/metrics.conf.template:/etc/nginx/templates/default.conf.template:ro
+    networks: [data, observability]
+    depends_on:
+      api:
+        condition: service_healthy
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.retention.time=7d]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yaml:/etc/prometheus/alerts.yaml:ro
+      - prometheus-data:/prometheus
+    networks: [observability]
+  grafana:
+    image: grafana/grafana:12.2.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Run bootstrap first}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    ports: ["127.0.0.1:3100:3000"]
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks: [observability, edge]
+networks:
+  edge: {}
+  outbound: {}
+  observability:
+    internal: true
+  data:
+    internal: true
+volumes:
+  postgres-data: {}
+  redis-data: {}
+  lab-logs: {}
+  search-data: {}
+  prometheus-data: {}
+  grafana-data: {}

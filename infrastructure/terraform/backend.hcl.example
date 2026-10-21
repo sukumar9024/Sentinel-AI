@@ -1,0 +1,7 @@
+# Example only. Create and secure the state bucket separately when cloud deployment is authorized.
+# Add `backend "s3" {}` to the root terraform block before using these values.
+bucket = "REPLACE-WITH-EXISTING-STATE-BUCKET"
+key = "sentinel/dev/terraform.tfstate"
+region = "ap-south-2"
+encrypt = true
+use_lockfile = true

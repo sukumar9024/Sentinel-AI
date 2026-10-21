@@ -1,0 +1,181 @@
+{
+  "uid": "sentinel-platform",
+  "title": "SentinelAI platform health",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Stored events",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "sentinel-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sentinel_events_stored"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Open incidents",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "sentinel-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sentinel_incidents_open"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Pending ingestion",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "sentinel-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sentinel_queue_depth"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Dead letters",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "sentinel-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sentinel_dead_letters"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Pipeline heartbeat age",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "sentinel-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sentinel_pipeline_heartbeat_age_seconds"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Integration heartbeat age",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "sentinel-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sentinel_integrations_heartbeat_age_seconds"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Integration failures",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "sentinel-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sentinel_integration_failures"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Stored alerts",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "sentinel-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sentinel_alerts_stored"
+        }
+      ]
+    }
+  ]
+}

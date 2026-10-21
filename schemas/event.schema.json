@@ -1,0 +1,190 @@
+{
+  "properties": {
+    "event_id": {
+      "format": "uuid",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "environment": {
+      "enum": [
+        "local",
+        "dev",
+        "staging",
+        "production"
+      ],
+      "title": "Environment",
+      "type": "string"
+    },
+    "source_type": {
+      "enum": [
+        "application",
+        "nginx",
+        "auth",
+        "container",
+        "host"
+      ],
+      "title": "Source Type",
+      "type": "string"
+    },
+    "host": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Host",
+      "type": "string"
+    },
+    "service": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Service",
+      "type": "string"
+    },
+    "message": {
+      "maxLength": 8192,
+      "title": "Message",
+      "type": "string"
+    },
+    "event_type": {
+      "default": "unknown",
+      "maxLength": 100,
+      "title": "Event Type",
+      "type": "string"
+    },
+    "severity": {
+      "default": "info",
+      "enum": [
+        "info",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "source_ip": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Ip"
+    },
+    "username": {
+      "anyOf": [
+        {
+          "maxLength": 100,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Username"
+    },
+    "http_path": {
+      "anyOf": [
+        {
+          "maxLength": 2048,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Http Path"
+    },
+    "http_method": {
+      "anyOf": [
+        {
+          "maxLength": 20,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Http Method"
+    },
+    "status_code": {
+      "anyOf": [
+        {
+          "maximum": 599,
+          "minimum": 100,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Status Code"
+    },
+    "user_agent": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "User Agent"
+    },
+    "request_id": {
+      "anyOf": [
+        {
+          "maxLength": 100,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Request Id"
+    },
+    "latency_ms": {
+      "anyOf": [
+        {
+          "maximum": 3600000,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Latency Ms"
+    },
+    "attributes": {
+      "additionalProperties": true,
+      "title": "Attributes",
+      "type": "object"
+    }
+  },
+  "required": [
+    "timestamp",
+    "environment",
+    "source_type",
+    "host",
+    "service",
+    "message"
+  ],
+  "title": "IncomingEvent",
+  "type": "object"
+}

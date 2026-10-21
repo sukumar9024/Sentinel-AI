@@ -1,0 +1,1914 @@
+1. Project Objective
+Build a centralized security observability platform that:
+collects logs from applications, containers, hosts, and reverse proxies
+normalizes events into a common schema
+detects suspicious activity using rules and thresholds
+correlates related alerts into incidents
+enriches incidents with AI-assisted analysis
+maps relevant activity to MITRE ATT&CK
+stores security incidents
+provides an analyst dashboard
+sends alerts to Slack/Discord/email
+exposes metrics about the security platform itself
+supports secure production deployment on AWS
+uses Terraform, Docker, CI/CD, secrets management, TLS, backups, monitoring, and RBAC
+The system should work like a lightweight combination of:
+SIEM
++
+Security Analytics
++
+Incident Management
++
+AI-assisted SOC Analysis
+
+2. Final Architecture
+                   LOG SOURCES
+                         |
+       +-----------------+-----------------+
+       |                 |                 |
+       v                 v                 v
+ Application Logs    Nginx Logs       Host Logs
+ Container Logs      Auth Logs        Audit Logs
+       |                 |                 |
+       +-----------------+-----------------+
+                         |
+                         v
+                    Fluent Bit
+                         |
+                         v
+                  Ingestion API
+                         |
+                         v
+                   Redis Streams
+                         |
+          +--------------+--------------+
+          |              |              |
+          v              v              v
+   Normalization      Storage        Detection
+      Worker           Worker          Worker
+          |              |              |
+          |              v              v
+          |        OpenSearch      Alert Events
+          |                             |
+          |                             v
+          |                       Correlation
+          |                          Engine
+          |                             |
+          |                             v
+          +----------------------> Incident
+                                        |
+                         +--------------+--------------+
+                         |              |              |
+                         v              v              v
+                    AI Analysis    ATT&CK Mapping   Enrichment
+                         |
+                         v
+                  PostgreSQL
+                         |
+                         v
+                   FastAPI API
+                         |
+                         v
+                    React UI
+                         |
+             +-----------+-----------+
+             |           |           |
+             v           v           v
+          Slack       Discord       Email
+
+PHASE 0 — Project Planning
+0.1 Define platform name
+Status: [ ]
+Suggested name:
+SentinelAI
+Other possibilities:
+SecWatch
+ThreatLens
+DrishtiSec
+SOCVision
+Pick one and use the same name everywhere.
+
+0.2 Define project scope
+Status: [ ]
+Initial production scope:
+application log ingestion
+Docker logs
+Nginx access/error logs
+Linux host logs
+authentication events
+security detection rules
+incident correlation
+AI-assisted investigation
+incident management
+alerting
+dashboards
+RBAC
+monitoring
+production deployment
+
+0.3 Define environments
+Status: [ ]
+Use:
+local
+dev
+staging
+production
+
+0.4 Define initial log sources
+Status: [ ]
+Start with:
+FastAPI application
+Nginx
+Docker containers
+Linux system logs
+SSH authentication logs
+Later expand to:
+AWS CloudTrail
+AWS ALB
+WAF
+GitLab/Jenkins
+PostgreSQL audit logs
+
+PHASE 1 — Repository Structure
+1.1 Create repository
+Status: [ ]
+Suggested structure:
+security-observability-platform/
+│
+├── services/
+│   ├── ingestion-api/
+│   ├── normalization-worker/
+│   ├── detection-worker/
+│   ├── correlation-worker/
+│   ├── ai-analysis-worker/
+│   ├── notification-worker/
+│   └── api/
+│
+├── frontend/
+│
+├── rules/
+│
+├── schemas/
+│
+├── infrastructure/
+│   ├── terraform/
+│   └── ansible/
+│
+├── docker/
+│
+├── monitoring/
+│
+├── logging/
+│
+├── pipelines/
+│
+├── scripts/
+│
+├── tests/
+│
+├── docs/
+│
+├── diagrams/
+│
+├── compose.yaml
+├── compose.dev.yaml
+├── compose.prod.yaml
+└── README.md
+
+PHASE 2 — Define Event Data Model
+This is one of the most important parts.
+Do this before building detections.
+2.1 Define normalized event schema
+Status: [ ]
+Every incoming event should ultimately be transformed into a common structure.
+Example:
+{
+  "event_id": "uuid",
+  "timestamp": "2026-09-19T10:30:00Z",
+  "environment": "production",
+  "source_type": "nginx",
+  "host": "app-server-01",
+  "service": "backend-api",
+  "event_type": "http_request",
+  "severity": "info",
+  "source_ip": "10.10.1.15",
+  "destination_ip": "10.10.2.20",
+  "method": "POST",
+  "path": "/api/v1/login",
+  "status_code": 401,
+  "user": "admin@example.com",
+  "message": "Authentication failed",
+  "request_id": "abcd-1234"
+}
+
+2.2 Define required fields
+Status: [ ]
+Minimum:
+event_id
+timestamp
+environment
+source_type
+host
+service
+event_type
+severity
+message
+
+2.3 Define optional security fields
+Status: [ ]
+Include where applicable:
+source_ip
+destination_ip
+source_port
+destination_port
+username
+user_id
+http_method
+http_path
+status_code
+user_agent
+process_name
+container_id
+request_id
+trace_id
+
+2.4 Define raw event preservation
+Status: [ ]
+Never discard the original event.
+Store:
+raw_event
+alongside normalized fields.
+This helps during investigations.
+
+PHASE 3 — Log Generating Application
+Project 2 needs realistic events.
+3.1 Reuse Project 1 application
+Status: [ ]
+Preferred approach:
+Use the application deployed from Project 1.
+Collect:
+authentication logs
+API logs
+Nginx access logs
+Nginx error logs
+container logs
+system logs
+
+3.2 Add security-relevant logging
+Status: [ ]
+Generate explicit events for:
+successful login
+failed login
+logout
+authorization failure
+password reset
+user creation
+role change
+API access
+suspicious request
+server errors
+
+3.3 Avoid sensitive logging
+Status: [ ]
+Never log:
+passwords
+JWT tokens
+API keys
+session tokens
+credit card data
+secrets
+
+PHASE 4 — Fluent Bit Collection Layer
+4.1 Deploy Fluent Bit
+Status: [ ]
+Run Fluent Bit on monitored hosts.
+
+4.2 Configure Docker log ingestion
+Status: [ ]
+Collect:
+/var/lib/docker/containers/*
+or configured Docker logging output.
+
+4.3 Collect Nginx logs
+Status: [ ]
+Collect:
+access.log
+error.log
+
+4.4 Collect Linux authentication logs
+Status: [ ]
+For Ubuntu:
+/var/log/auth.log
+
+4.5 Collect application logs
+Status: [ ]
+Prefer JSON structured logs.
+
+4.6 Add metadata
+Status: [ ]
+Each collector should append:
+hostname
+environment
+service_name
+source_type
+
+4.7 Configure buffering
+Status: [ ]
+If your ingestion API temporarily fails, Fluent Bit should buffer events rather than immediately discard them.
+
+4.8 Configure retry behavior
+Status: [ ]
+Set:
+retry limits
+backoff
+buffer size
+
+PHASE 5 — Ingestion API
+5.1 Build ingestion service
+Status: [ ]
+Use:
+FastAPI
+Endpoint:
+POST /api/v1/events
+
+5.2 Authenticate collectors
+Status: [ ]
+Do not expose unrestricted log ingestion.
+Use:
+API keys
+or
+mTLS
+For the first version, API keys are acceptable.
+
+5.3 Validate events
+Status: [ ]
+Reject malformed events.
+Validate:
+timestamp
+source
+event size
+environment
+service
+
+5.4 Add rate limiting
+Status: [ ]
+Prevent ingestion abuse.
+
+5.5 Add maximum payload size
+Status: [ ]
+Protect the ingestion service from oversized events.
+
+5.6 Publish events into queue
+Status: [ ]
+The API should not perform all analysis synchronously.
+Flow:
+Collector
+   |
+   v
+Ingestion API
+   |
+   v
+Redis Streams
+
+PHASE 6 — Redis Streams Event Queue
+6.1 Deploy Redis
+Status: [ ]
+Use Redis Streams as the message broker initially.
+
+6.2 Create event streams
+Status: [ ]
+Example:
+security.raw.events
+security.normalized.events
+security.alerts
+security.incidents
+security.ai.jobs
+security.notifications
+
+6.3 Use consumer groups
+Status: [ ]
+Each worker should use proper Redis consumer groups.
+
+6.4 Add retry queue
+Status: [ ]
+Failed processing should not lose events.
+Create:
+security.retry.events
+
+6.5 Add dead-letter queue
+Status: [ ]
+Create:
+security.dlq
+Events that repeatedly fail processing should end there.
+
+PHASE 7 — Normalization Service
+7.1 Build normalization worker
+Status: [ ]
+Purpose:
+raw vendor-specific event
+        ↓
+common security event format
+
+7.2 Nginx parser
+Status: [ ]
+Extract:
+IP
+method
+path
+status
+response size
+user agent
+request time
+
+7.3 Application parser
+Status: [ ]
+Parse JSON application logs.
+
+7.4 Authentication parser
+Status: [ ]
+Normalize SSH/login events.
+
+7.5 Container parser
+Status: [ ]
+Extract:
+container_name
+container_id
+image
+service
+message
+
+7.6 Timestamp normalization
+Status: [ ]
+Convert timestamps to UTC.
+
+PHASE 8 — OpenSearch Storage
+8.1 Deploy OpenSearch
+Status: [ ]
+Use OpenSearch for searchable event storage.
+
+8.2 Create indexes
+Status: [ ]
+For example:
+security-events-YYYY.MM.DD
+security-alerts-YYYY.MM.DD
+
+8.3 Configure index templates
+Status: [ ]
+Define correct data types for:
+IP
+timestamp
+keyword
+text
+integer
+boolean
+
+8.4 Configure retention
+Status: [ ]
+Example:
+hot data:
+7 days
+
+searchable data:
+30 days
+Adjust based on AWS cost.
+
+8.5 Configure index lifecycle
+Status: [ ]
+Automatically rotate/delete old logs.
+
+PHASE 9 — PostgreSQL Incident Database
+Use PostgreSQL for structured security platform data.
+9.1 Create database
+Status: [ ]
+Tables:
+users
+roles
+assets
+rules
+alerts
+incidents
+incident_events
+incident_notes
+mitre_techniques
+notifications
+audit_logs
+ai_analyses
+
+9.2 Define incident table
+Status: [ ]
+Example fields:
+incident_id
+title
+description
+severity
+status
+source
+asset
+first_seen
+last_seen
+event_count
+assigned_to
+created_at
+updated_at
+resolved_at
+
+PHASE 10 — Detection Rule Format
+10.1 Create detection rule specification
+Status: [ ]
+Example:
+id: AUTH-001
+
+name: Excessive Failed Logins
+
+description: >
+  Detect multiple authentication failures
+  from the same source.
+
+severity: high
+
+source:
+  event_type: authentication_failure
+
+group_by:
+  - source_ip
+
+condition:
+  count: 10
+  within_seconds: 60
+
+mitre:
+  tactic: Credential Access
+  technique: T1110
+
+10.2 Store rules in Git
+Status: [ ]
+Use:
+rules/
+├── authentication/
+├── web/
+├── network/
+├── application/
+├── linux/
+└── containers/
+This gives you detection-as-code.
+
+PHASE 11 — Detection Engine
+11.1 Build detection worker
+Status: [ ]
+Worker consumes:
+security.normalized.events
+
+11.2 Implement single-event rules
+Status: [ ]
+Example:
+HTTP path contains:
+../
+
+Potential path traversal
+
+11.3 Implement threshold rules
+Status: [ ]
+Example:
+10 authentication failures
+from same IP
+within 60 seconds
+
+11.4 Implement time-window detection
+Status: [ ]
+Detection system must maintain state over configurable windows.
+
+11.5 Implement grouping
+Status: [ ]
+Group by fields such as:
+source_ip
+user
+service
+host
+path
+
+PHASE 12 — Initial Detection Rules
+Create at least 15-20 useful rules.
+12.1 Failed login burst
+Status: [ ]
+
+12.2 Successful login after multiple failures
+Status: [ ]
+This is more interesting than failed login alone.
+
+12.3 Authentication from unusual source
+Status: [ ]
+
+12.4 Repeated HTTP 401
+Status: [ ]
+
+12.5 Repeated HTTP 403
+Status: [ ]
+
+12.6 Excessive HTTP 404
+Status: [ ]
+Potential endpoint enumeration.
+
+12.7 SQL injection patterns
+Status: [ ]
+Detect suspicious request strings.
+
+12.8 Path traversal attempts
+Status: [ ]
+
+12.9 Suspicious user-agent
+Status: [ ]
+
+12.10 Excessive requests from one source
+Status: [ ]
+
+12.11 HTTP 5xx spike
+Status: [ ]
+
+12.12 Container restart loop
+Status: [ ]
+
+12.13 Privileged container event
+Status: [ ]
+If that telemetry is available.
+
+12.14 SSH authentication failure burst
+Status: [ ]
+
+12.15 SSH successful login after failures
+Status: [ ]
+
+12.16 Unauthorized admin endpoint attempt
+Status: [ ]
+
+12.17 New privileged user created
+Status: [ ]
+
+12.18 User role escalation
+Status: [ ]
+
+12.19 Application error spike
+Status: [ ]
+
+12.20 Abnormal request latency spike
+Status: [ ]
+Not purely security-related, but useful for correlation.
+
+PHASE 13 — Alert Creation
+13.1 Define alert schema
+Status: [ ]
+Example:
+{
+  "alert_id": "ALT-2026-00122",
+  "rule_id": "AUTH-001",
+  "severity": "high",
+  "source_ip": "10.1.1.50",
+  "service": "auth-api",
+  "event_count": 42,
+  "first_seen": "...",
+  "last_seen": "..."
+}
+
+13.2 Add alert deduplication
+Status: [ ]
+Do not repeatedly create identical alerts every few seconds.
+
+13.3 Add alert suppression window
+Status: [ ]
+Example:
+same rule
+same source
+same target
+within 5 minutes
+may update the existing alert instead.
+
+PHASE 14 — Correlation Engine
+This is what will separate the project from a basic log scanner.
+14.1 Build correlation service
+Status: [ ]
+Consume:
+security.alerts
+
+14.2 Correlate related alerts
+Status: [ ]
+Example:
+Failed logins
++
+403 responses
++
+successful login
++
+admin page access
+could become:
+Potential account compromise
+
+14.3 Define correlation time window
+Status: [ ]
+Example:
+5 minutes
+15 minutes
+1 hour
+depending on rule type.
+
+14.4 Correlate by entity
+Status: [ ]
+Possible keys:
+source_ip
+user
+host
+service
+session
+request_id
+
+14.5 Build incident from alerts
+Status: [ ]
+Flow:
+Events
+  ↓
+Alerts
+  ↓
+Correlated alerts
+  ↓
+Incident
+
+PHASE 15 — Incident Severity
+15.1 Define severity model
+Status: [ ]
+Use:
+Informational
+Low
+Medium
+High
+Critical
+
+15.2 Define severity criteria
+Status: [ ]
+Consider:
+rule severity
+number of events
+asset importance
+authentication success
+privilege level
+number of affected assets
+
+PHASE 16 — Incident Lifecycle
+16.1 Define statuses
+Status: [ ]
+Use:
+NEW
+ACKNOWLEDGED
+INVESTIGATING
+MITIGATED
+RESOLVED
+FALSE_POSITIVE
+
+16.2 Track incident ownership
+Status: [ ]
+Fields:
+assigned_to
+assigned_at
+
+16.3 Add analyst notes
+Status: [ ]
+Analysts should be able to append investigation notes.
+
+16.4 Add resolution field
+Status: [ ]
+Record:
+root cause
+resolution
+resolution time
+
+PHASE 17 — MITRE ATT&CK Mapping
+17.1 Add ATT&CK fields to rules
+Status: [ ]
+Store:
+tactic
+technique
+technique_id
+
+17.2 Map only relevant detections
+Status: [ ]
+Do not attach ATT&CK techniques just to make the UI look impressive.
+
+17.3 Display ATT&CK information
+Status: [ ]
+Incident detail should show mappings where available.
+
+PHASE 18 — AI Analysis Service
+18.1 Build AI worker
+Status: [ ]
+Input:
+incident metadata
+related alerts
+relevant event samples
+asset information
+MITRE mapping
+
+18.2 Define AI output schema
+Status: [ ]
+Return structured output:
+{
+  "summary": "",
+  "observations": [],
+  "possible_cause": "",
+  "potential_impact": "",
+  "investigation_steps": [],
+  "recommended_actions": [],
+  "confidence": ""
+}
+
+18.3 Do not send unnecessary raw logs
+Status: [ ]
+Filter and select relevant events before sending them to the model.
+
+18.4 Remove sensitive values
+Status: [ ]
+Redact:
+passwords
+tokens
+API keys
+cookies
+authorization headers
+
+18.5 Add AI request timeout
+Status: [ ]
+The security pipeline must continue working if AI is unavailable.
+
+18.6 Implement AI fallback
+Status: [ ]
+If AI fails:
+incident still gets created
+detections still work
+notifications still work
+AI must not be a critical dependency.
+
+PHASE 19 — AI Safety Architecture
+19.1 Keep AI read-only
+Status: [ ]
+AI may:
+summarize
+classify
+suggest
+correlate context
+AI must not directly:
+block IPs
+restart servers
+disable users
+run shell commands
+delete resources
+
+19.2 Separate recommendation and execution
+Status: [ ]
+Architecture:
+AI recommendation
+      ↓
+Policy engine / analyst
+      ↓
+Approved action
+
+PHASE 20 — Asset Management
+20.1 Create assets table
+Status: [ ]
+Fields:
+asset_id
+hostname
+IP
+environment
+service
+owner
+criticality
+
+20.2 Define asset criticality
+Status: [ ]
+Use:
+Low
+Medium
+High
+Critical
+
+20.3 Use asset criticality during incident scoring
+Status: [ ]
+Example:
+failed login against test service
+should not necessarily have the same contextual importance as:
+same event against production admin service
+
+PHASE 21 — Backend API
+21.1 Create FastAPI management API
+Status: [ ]
+Separate management API from ingestion API if practical.
+
+21.2 Implement endpoints
+Status: [ ]
+Example:
+/api/v1/auth
+/api/v1/incidents
+/api/v1/alerts
+/api/v1/events
+/api/v1/assets
+/api/v1/rules
+/api/v1/users
+/api/v1/dashboard
+
+21.3 Add pagination
+Status: [ ]
+Do not return thousands of events in one API response.
+
+21.4 Add filtering
+Status: [ ]
+Support filtering by:
+time
+severity
+status
+service
+host
+source_ip
+rule
+environment
+
+PHASE 22 — Authentication
+22.1 Implement login
+Status: [ ]
+
+22.2 JWT access token
+Status: [ ]
+
+22.3 Refresh token
+Status: [ ]
+
+22.4 Secure password storage
+Status: [ ]
+Use strong password hashing.
+
+PHASE 23 — RBAC
+23.1 Define roles
+Status: [ ]
+Use:
+Administrator
+Security Analyst
+Viewer
+
+23.2 Administrator permissions
+Status: [ ]
+Can:
+manage users
+manage rules
+manage settings
+manage assets
+view all incidents
+
+23.3 Analyst permissions
+Status: [ ]
+Can:
+investigate incidents
+update incident status
+write notes
+view events
+
+23.4 Viewer permissions
+Status: [ ]
+Read-only.
+
+PHASE 24 — Audit Logging
+24.1 Record platform actions
+Status: [ ]
+Audit:
+login
+logout
+incident update
+rule change
+user change
+configuration change
+AI analysis requested
+
+24.2 Protect audit logs
+Status: [ ]
+Normal users must not modify audit history.
+
+PHASE 25 — Frontend Dashboard
+25.1 Create React TypeScript frontend
+Status: [ ]
+
+25.2 Main security dashboard
+Status: [ ]
+Display:
+Open incidents
+Critical incidents
+High incidents
+Events per second
+Alerts today
+Top attacked services
+Top source IPs
+
+25.3 Incident list
+Status: [ ]
+Columns:
+ID
+Severity
+Title
+Status
+Asset
+First seen
+Last seen
+Owner
+
+25.4 Incident detail page
+Status: [ ]
+Display:
+incident summary
+severity
+timeline
+affected assets
+related alerts
+related events
+MITRE mapping
+AI analysis
+analyst notes
+resolution
+
+25.5 Event search page
+Status: [ ]
+Support query/filtering.
+
+25.6 Detection rule page
+Status: [ ]
+Show:
+rule ID
+name
+severity
+enabled/disabled
+MITRE mapping
+last triggered
+
+PHASE 26 — Production Dockerfiles
+26.1 Dockerize each backend service
+Status: [ ]
+Every service should have:
+multi-stage Dockerfile where appropriate
+pinned image
+non-root user
+health check
+minimal runtime dependencies
+no secrets inside image
+
+26.2 Frontend production image
+Status: [ ]
+Use:
+Node build
+   ↓
+Nginx runtime
+
+26.3 Immutable versions
+Status: [ ]
+Tag:
+service:git-sha
+Not only:
+latest
+
+PHASE 27 — Production Compose
+27.1 Create local production-like compose stack
+Status: [ ]
+Services:
+frontend
+api
+ingestion-api
+normalization-worker
+detection-worker
+correlation-worker
+ai-worker
+notification-worker
+redis
+postgres
+opensearch
+prometheus
+grafana
+
+27.2 Configure separate networks
+Status: [ ]
+Suggested:
+edge
+backend
+data
+observability
+
+27.3 Restrict internal services
+Status: [ ]
+Do not expose publicly:
+Redis
+PostgreSQL
+OpenSearch
+Prometheus
+worker ports
+
+PHASE 28 — AWS Infrastructure
+28.1 Build using Terraform
+Status: [ ]
+Create:
+VPC
+public subnets
+private application subnets
+private data subnets
+ALB
+EC2/ECS
+RDS
+Redis
+OpenSearch
+ECR
+Secrets Manager
+S3
+IAM
+CloudWatch
+Route53
+ACM
+
+28.2 Separate public and private resources
+Status: [ ]
+Public:
+ALB
+Private:
+application services
+workers
+Redis
+RDS
+OpenSearch
+
+PHASE 29 — Security Groups
+29.1 ALB rules
+Status: [ ]
+Allow:
+443 from Internet
+
+29.2 Application rules
+Status: [ ]
+Allow only from ALB where appropriate.
+
+29.3 Database rules
+Status: [ ]
+Allow PostgreSQL only from backend services.
+
+29.4 Redis rules
+Status: [ ]
+Allow Redis only from platform services.
+
+29.5 OpenSearch rules
+Status: [ ]
+Only platform backend/workers should access OpenSearch.
+
+PHASE 30 — Secrets Management
+30.1 Store secrets in Secrets Manager
+Status: [ ]
+Store:
+database password
+Redis credentials
+JWT secret
+AI API key
+webhook URL
+email credentials
+collector API keys
+
+30.2 Implement runtime secret retrieval
+Status: [ ]
+
+30.3 Prevent secrets in logs
+Status: [ ]
+Add redaction logic.
+
+PHASE 31 — TLS and Domain
+31.1 Create domain
+Status: [ ]
+Example:
+security.example.com
+
+31.2 ACM certificate
+Status: [ ]
+
+31.3 HTTPS only
+Status: [ ]
+Redirect:
+80
+→
+443
+
+PHASE 32 — CI/CD
+32.1 Create pipeline
+Status: [ ]
+Recommended flow:
+Checkout
+   ↓
+Lint
+   ↓
+Unit Tests
+   ↓
+Semgrep
+   ↓
+Dependency Scan
+   ↓
+Terraform Validate
+   ↓
+IaC Scan
+   ↓
+Docker Build
+   ↓
+Trivy
+   ↓
+Push ECR
+   ↓
+Deploy Staging
+   ↓
+Integration Tests
+   ↓
+Security Tests
+   ↓
+Approval
+   ↓
+Deploy Production
+   ↓
+Smoke Test
+
+PHASE 33 — Unit Testing
+33.1 Test parsers
+Status: [ ]
+
+33.2 Test normalization
+Status: [ ]
+
+33.3 Test detection rules
+Status: [ ]
+This is critical.
+Each detection rule should have:
+positive test
+negative test
+
+33.4 Test correlation logic
+Status: [ ]
+
+33.5 Test API authorization
+Status: [ ]
+
+PHASE 34 — Detection Rule Testing
+Create test event fixtures.
+34.1 Benign authentication
+Status: [ ]
+Must not alert.
+
+34.2 Brute-force scenario
+Status: [ ]
+Must alert.
+
+34.3 Enumeration scenario
+Status: [ ]
+Must alert.
+
+34.4 SQL injection-like request
+Status: [ ]
+Must alert.
+
+34.5 Normal browsing traffic
+Status: [ ]
+Should not generate excessive false positives.
+
+PHASE 35 — Notification Service
+35.1 Build notification worker
+Status: [ ]
+Consume:
+security.notifications
+
+35.2 Discord integration
+Status: [ ]
+
+35.3 Slack integration
+Status: [ ]
+Optional if Discord exists.
+
+35.4 Email integration
+Status: [ ]
+
+35.5 Define notification thresholds
+Status: [ ]
+Example:
+Critical
+→ immediate
+
+High
+→ immediate
+
+Medium
+→ dashboard + optional notification
+
+Low
+→ dashboard only
+
+PHASE 36 — Prometheus Metrics
+Every platform component should expose metrics.
+36.1 Ingestion metrics
+Status: [ ]
+Examples:
+events_received_total
+events_rejected_total
+events_ingestion_latency
+
+36.2 Queue metrics
+Status: [ ]
+Track:
+queue_depth
+consumer_lag
+retry_count
+dead_letter_count
+
+36.3 Detection metrics
+Status: [ ]
+rules_evaluated_total
+alerts_generated_total
+rule_processing_errors_total
+
+36.4 Incident metrics
+Status: [ ]
+incidents_created_total
+incidents_by_severity
+incidents_resolved_total
+
+36.5 AI metrics
+Status: [ ]
+ai_requests_total
+ai_failures_total
+ai_latency
+
+PHASE 37 — Grafana Monitoring
+37.1 Platform health dashboard
+Status: [ ]
+Show:
+events/sec
+queue depth
+worker status
+OpenSearch status
+Redis status
+PostgreSQL status
+
+37.2 Detection dashboard
+Status: [ ]
+Show:
+alerts by rule
+alerts by severity
+top source IP
+top services
+
+37.3 AI dashboard
+Status: [ ]
+Show:
+AI requests
+AI failures
+AI latency
+
+PHASE 38 — Platform Alerting
+38.1 Ingestion failure alert
+Status: [ ]
+
+38.2 Queue backlog alert
+Status: [ ]
+
+38.3 Worker failure alert
+Status: [ ]
+
+38.4 OpenSearch unavailable alert
+Status: [ ]
+
+38.5 Redis unavailable alert
+Status: [ ]
+
+38.6 Database unavailable alert
+Status: [ ]
+
+38.7 AI service degradation alert
+Status: [ ]
+AI failure should alert but should not stop core detection.
+
+PHASE 39 — Rate Limiting and Abuse Protection
+39.1 Ingestion rate limits
+Status: [ ]
+
+39.2 UI/API rate limits
+Status: [ ]
+
+39.3 Login rate limiting
+Status: [ ]
+
+PHASE 40 — Data Retention
+40.1 Define event retention
+Status: [ ]
+For example:
+raw events:
+30 days
+
+40.2 Incident retention
+Status: [ ]
+Keep structured incident records longer than raw logs.
+
+40.3 AI analysis retention
+Status: [ ]
+Define how long analysis output remains.
+
+PHASE 41 — Backup Strategy
+41.1 PostgreSQL backups
+Status: [ ]
+
+41.2 OpenSearch snapshots
+Status: [ ]
+Store snapshots in S3.
+
+41.3 Detection rules backup
+Status: [ ]
+Already versioned in Git.
+
+41.4 Configuration backup
+Status: [ ]
+
+PHASE 42 — Restore Testing
+42.1 Restore PostgreSQL backup
+Status: [ ]
+
+42.2 Restore OpenSearch snapshot
+Status: [ ]
+
+42.3 Rebuild environment from Terraform
+Status: [ ]
+
+42.4 Reapply detection rules
+Status: [ ]
+
+PHASE 43 — Security Hardening
+43.1 Containers run non-root
+Status: [ ]
+
+43.2 Read-only root filesystem where possible
+Status: [ ]
+
+43.3 Drop unnecessary Linux capabilities
+Status: [ ]
+
+43.4 No privileged containers
+Status: [ ]
+
+43.5 Restrict IAM
+Status: [ ]
+
+43.6 Private data services
+Status: [ ]
+
+43.7 Encrypt RDS
+Status: [ ]
+
+43.8 Encrypt OpenSearch
+Status: [ ]
+
+43.9 Encrypt Redis where applicable
+Status: [ ]
+
+43.10 TLS between services where appropriate
+Status: [ ]
+
+PHASE 44 — CI/CD Security
+44.1 Semgrep
+Status: [ ]
+
+44.2 Trivy filesystem scan
+Status: [ ]
+
+44.3 Container scan
+Status: [ ]
+
+44.4 Terraform scan
+Status: [ ]
+
+44.5 Secret scanning
+Status: [ ]
+
+44.6 Dependency scanning
+Status: [ ]
+
+PHASE 45 — Security Simulation Lab
+Only generate traffic against systems you own/control.
+45.1 Failed login simulation
+Status: [ ]
+Expected:
+events
+→ detection
+→ alert
+→ incident
+
+45.2 Endpoint enumeration simulation
+Status: [ ]
+
+45.3 SQL injection test strings
+Status: [ ]
+
+45.4 Path traversal test
+Status: [ ]
+
+45.5 Repeated unauthorized access
+Status: [ ]
+
+45.6 HTTP error spike
+Status: [ ]
+
+45.7 Suspicious user-agent test
+Status: [ ]
+
+PHASE 46 — End-to-End Security Scenario
+This is the scenario you should eventually show in your demo.
+Status: [ ]
+Generate:
+25 failed logins
+        ↓
+successful login
+        ↓
+admin endpoint accessed
+        ↓
+multiple 403 responses
+Expected flow:
+Fluent Bit
+     ↓
+Ingestion
+     ↓
+Normalization
+     ↓
+Detection rules
+     ↓
+Multiple alerts
+     ↓
+Correlation engine
+     ↓
+Single HIGH/CRITICAL incident
+     ↓
+MITRE ATT&CK mapping
+     ↓
+AI analysis
+     ↓
+Security dashboard
+     ↓
+Discord/Slack alert
+That demonstration will be one of the strongest parts of this project.
+
+PHASE 47 — AI Output Validation
+47.1 Compare AI response to raw evidence
+Status: [ ]
+Verify that the AI does not invent evidence.
+
+47.2 Clearly separate facts from recommendations
+Status: [ ]
+UI could display:
+Observed Evidence
+
+AI Assessment
+
+Recommended Investigation
+These should remain separate.
+
+47.3 Show confidence carefully
+Status: [ ]
+Avoid presenting probabilistic AI output as confirmed root cause.
+
+PHASE 48 — Incident Timeline
+48.1 Build chronological timeline
+Status: [ ]
+Example:
+10:32:10
+First failed login
+
+10:32:20
+10 failed logins reached
+
+10:32:21
+AUTH-001 triggered
+
+10:33:01
+Successful login
+
+10:33:04
+Admin endpoint accessed
+
+10:33:05
+Incident escalated HIGH → CRITICAL
+
+10:33:10
+AI analysis completed
+This is an excellent portfolio feature.
+
+PHASE 49 — Search Capability
+49.1 Search raw events
+Status: [ ]
+
+49.2 Filter by source IP
+Status: [ ]
+
+49.3 Filter by service
+Status: [ ]
+
+49.4 Filter by time
+Status: [ ]
+
+49.5 Filter by event type
+Status: [ ]
+
+49.6 Search by request ID
+Status: [ ]
+This is especially valuable for troubleshooting.
+
+PHASE 50 — Production Performance Testing
+50.1 Establish baseline event volume
+Status: [ ]
+For example:
+100 events/sec
+Then increase.
+
+50.2 Test ingestion throughput
+Status: [ ]
+Measure:
+events/sec
+latency
+CPU
+memory
+
+50.3 Test worker backlog
+Status: [ ]
+Verify queue behavior if workers slow down.
+
+50.4 Test OpenSearch indexing throughput
+Status: [ ]
+
+50.5 Test burst traffic
+Status: [ ]
+Example:
+normal:
+100 events/sec
+
+burst:
+1000 events/sec
+The system should degrade predictably rather than lose everything.
+
+PHASE 51 — Failure Testing
+51.1 Stop detection worker
+Status: [ ]
+Verify events remain queued.
+
+51.2 Stop OpenSearch
+Status: [ ]
+Verify retry behavior.
+
+51.3 Stop Redis
+Status: [ ]
+Verify monitoring detects the critical dependency failure.
+
+51.4 Stop AI service
+Status: [ ]
+Core detection must continue.
+
+51.5 Stop PostgreSQL
+Status: [ ]
+Check incident/API behavior.
+
+51.6 Kill notification worker
+Status: [ ]
+Alerts should remain queued for retry.
+
+PHASE 52 — Dead Letter Handling
+52.1 Build DLQ inspection interface
+Status: [ ]
+At minimum, provide API/admin tooling.
+
+52.2 Support event replay
+Status: [ ]
+After correcting parser/rule issues:
+DLQ event
+   ↓
+reprocess
+
+PHASE 53 — High Availability Considerations
+You do not necessarily need enterprise HA for a portfolio deployment, but design for it.
+53.1 Stateless API design
+Status: [ ]
+APIs should support multiple replicas.
+
+53.2 Stateless worker design
+Status: [ ]
+Workers should use queue consumer groups.
+
+53.3 Document scaling strategy
+Status: [ ]
+Example:
+More event load
+      ↓
+Increase detection workers
+
+More API load
+      ↓
+Increase API replicas
+
+More search load
+      ↓
+Scale OpenSearch
+
+PHASE 54 — Production Runbooks
+54.1 Ingestion failure runbook
+Status: [ ]
+
+54.2 Queue backlog runbook
+Status: [ ]
+
+54.3 OpenSearch failure runbook
+Status: [ ]
+
+54.4 Redis failure runbook
+Status: [ ]
+
+54.5 Database failure runbook
+Status: [ ]
+
+54.6 AI provider failure runbook
+Status: [ ]
+
+54.7 High false-positive runbook
+Status: [ ]
+
+PHASE 55 — Architecture Documentation
+55.1 Overall architecture diagram
+Status: [ ]
+Create:
+01-overall-architecture.png
+
+55.2 Event pipeline diagram
+Status: [ ]
+02-event-pipeline.png
+
+55.3 Detection architecture
+Status: [ ]
+03-detection-engine.png
+
+55.4 Incident correlation architecture
+Status: [ ]
+04-correlation-flow.png
+
+55.5 AWS architecture
+Status: [ ]
+05-aws-production.png
+
+55.6 Security architecture
+Status: [ ]
+06-security-controls.png
+
+PHASE 56 — README
+Status: [ ]
+README should contain:
+Project overview
+Problem statement
+Architecture
+Technology stack
+Repository structure
+Event ingestion
+Normalized schema
+Detection engine
+Correlation engine
+MITRE ATT&CK mapping
+AI analysis
+Security architecture
+AWS infrastructure
+CI/CD
+Monitoring
+Backup/restore
+Deployment
+Demo scenarios
+Screenshots
+Future improvements
+
+PHASE 57 — Demo Material
+Capture screenshots of:
+[ ] Security dashboard
+[ ] Incident list
+[ ] Incident timeline
+[ ] AI analysis
+[ ] MITRE mapping
+[ ] Detection rules
+[ ] Event search
+[ ] OpenSearch
+[ ] Grafana
+[ ] Jenkins pipeline
+[ ] Terraform infrastructure
+[ ] Slack/Discord incident alert
+
+PHASE 58 — Final Production Validation
+Do not call Project 2 finished until:
+[ ] HTTPS dashboard works
+[ ] Authentication works
+[ ] RBAC works
+[ ] collectors authenticated
+[ ] logs reach ingestion service
+[ ] Redis queue works
+[ ] normalization works
+[ ] OpenSearch stores events
+[ ] detection engine works
+[ ] threshold rules work
+[ ] alerts deduplicate correctly
+[ ] correlation works
+[ ] incidents are created
+[ ] MITRE mapping works
+[ ] AI analysis works
+[ ] AI failure does not break detection
+[ ] notifications work
+[ ] audit logging works
+[ ] Prometheus works
+[ ] Grafana works
+[ ] platform alerts work
+[ ] databases are private
+[ ] Redis is private
+[ ] OpenSearch is private
+[ ] secrets are externally managed
+[ ] Terraform reproduces infrastructure
+[ ] CI/CD works
+[ ] security scans work
+[ ] backups work
+[ ] restore was tested
+[ ] failure scenarios were tested
+[ ] architecture is documented
+[ ] GitHub README is complete
+Recommended Execution Order
+Follow this order rather than jumping between components:
+01. Repository structure
+02. Event schema
+03. Generate structured application logs
+04. Fluent Bit
+05. Ingestion API
+06. Redis Streams
+07. Normalization worker
+08. OpenSearch
+09. PostgreSQL schema
+10. Detection rule format
+11. Detection worker
+12. First 5 detection rules
+13. Alert model
+14. Deduplication
+15. Correlation engine
+16. Incident model
+17. Incident lifecycle
+18. MITRE ATT&CK mapping
+19. Backend management API
+20. Authentication
+21. RBAC
+22. Audit logging
+23. Frontend
+24. Incident dashboard
+25. Event search
+26. Detection-rule UI
+27. AI analysis service
+28. AI redaction/guardrails
+29. Notification service
+30. Remaining detection rules
+31. Prometheus instrumentation
+32. Grafana
+33. Platform alerts
+34. Production Dockerfiles
+35. Production Compose
+36. Terraform
+37. AWS VPC/networking
+38. RDS
+39. Redis
+40. OpenSearch
+41. Compute
+42. ALB
+43. Secrets Manager
+44. Route53
+45. ACM/TLS
+46. CI/CD
+47. Semgrep
+48. dependency scan
+49. Trivy
+50. IaC security scan
+51. staging deployment
+52. security simulations
+53. production deployment
+54. load testing
+55. failure testing
+56. backups
+57. restore test
+58. production runbooks
+59. architecture diagrams
+60. README
+61. demo recording
+62. final validation
+The most important thing is that Project 2 should not be described as “AI reads logs and finds attacks.” Its core should be deterministic engineering:
+Collect
+   ↓
+Normalize
+   ↓
+Queue
+   ↓
+Detect
+   ↓
+Correlate
+   ↓
+Create Incident
+   ↓
+Enrich with AI
+   ↓
+Analyst Investigation
+That architecture is much more defensible in an interview because you can explain exactly what happens when the LLM is slow, unavailable, wrong, or unnecessary. AI becomes an analyst-assistance layer, while your actual monitoring and detection pipeline remains reliable and deterministic.
+Thinking effortInstant
+To pick up a draggable item, press the space bar. While dragging, use the arrow keys to move the item. Press space again to drop the item in its new position, or press escape to cancel.

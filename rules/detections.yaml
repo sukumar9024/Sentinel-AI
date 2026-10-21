@@ -1,0 +1,347 @@
+# Detection-as-code. JSON is a YAML subset. Validate with pytest.
+[
+  {
+    "id": "AUTH-001",
+    "name": "Failed login burst",
+    "severity": "high",
+    "match": {
+      "event_type": {
+        "eq": "authentication_failure"
+      }
+    },
+    "count": 10,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": {
+      "id": "T1110",
+      "name": "Brute Force",
+      "tactic": "Credential Access"
+    },
+    "preceded_by": null
+  },
+  {
+    "id": "AUTH-002",
+    "name": "Successful login after repeated failures",
+    "severity": "critical",
+    "match": {
+      "event_type": {
+        "eq": "authentication_success"
+      }
+    },
+    "count": 1,
+    "within_seconds": 300,
+    "suppression_seconds": 300,
+    "mitre": {
+      "id": "T1078",
+      "name": "Valid Accounts",
+      "tactic": "Initial Access"
+    },
+    "preceded_by": {
+      "match": {
+        "event_type": {
+          "eq": "authentication_failure"
+        }
+      },
+      "count": 5,
+      "same_username": true
+    }
+  },
+  {
+    "id": "WEB-001",
+    "name": "Repeated unauthorized requests",
+    "severity": "medium",
+    "match": {
+      "status_code": {
+        "eq": 401
+      }
+    },
+    "count": 10,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": null,
+    "preceded_by": null
+  },
+  {
+    "id": "WEB-002",
+    "name": "Repeated forbidden requests",
+    "severity": "high",
+    "match": {
+      "status_code": {
+        "eq": 403
+      }
+    },
+    "count": 5,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": null,
+    "preceded_by": null
+  },
+  {
+    "id": "WEB-003",
+    "name": "Endpoint enumeration",
+    "severity": "medium",
+    "match": {
+      "status_code": {
+        "eq": 404
+      }
+    },
+    "count": 15,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": null,
+    "preceded_by": null
+  },
+  {
+    "id": "WEB-004",
+    "name": "SQL injection pattern",
+    "severity": "high",
+    "match": {
+      "http_path": {
+        "regex": "(?i)(union\\s+select|or\\s+1\\s*=\\s*1|sleep\\s*\\(|drop\\s+table)"
+      }
+    },
+    "count": 1,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": {
+      "id": "T1190",
+      "name": "Exploit Public-Facing Application",
+      "tactic": "Initial Access"
+    },
+    "preceded_by": null
+  },
+  {
+    "id": "WEB-005",
+    "name": "Path traversal attempt",
+    "severity": "high",
+    "match": {
+      "http_path": {
+        "contains": "../"
+      }
+    },
+    "count": 1,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": {
+      "id": "T1190",
+      "name": "Exploit Public-Facing Application",
+      "tactic": "Initial Access"
+    },
+    "preceded_by": null
+  },
+  {
+    "id": "WEB-006",
+    "name": "Known scanner user agent",
+    "severity": "medium",
+    "match": {
+      "user_agent": {
+        "regex": "(?i)(sqlmap|nikto|nuclei)"
+      }
+    },
+    "count": 1,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": null,
+    "preceded_by": null
+  },
+  {
+    "id": "WEB-007",
+    "name": "Request volume spike",
+    "severity": "medium",
+    "match": {
+      "event_type": {
+        "eq": "http_request"
+      }
+    },
+    "count": 100,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": null,
+    "preceded_by": null
+  },
+  {
+    "id": "WEB-008",
+    "name": "HTTP server error spike",
+    "severity": "medium",
+    "match": {
+      "status_code": {
+        "gte": 500
+      }
+    },
+    "count": 10,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": null,
+    "preceded_by": null
+  },
+  {
+    "id": "WEB-009",
+    "name": "Unauthorized admin access",
+    "severity": "high",
+    "match": {
+      "path_only": {
+        "regex": "^/admin(?:/|$)"
+      },
+      "status_code": {
+        "in": [
+          401,
+          403
+        ]
+      }
+    },
+    "count": 1,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": null,
+    "preceded_by": null
+  },
+  {
+    "id": "WEB-010",
+    "name": "Admin access following suspicious login",
+    "severity": "critical",
+    "match": {
+      "path_only": {
+        "regex": "^/admin(?:/|$)"
+      },
+      "status_code": {
+        "eq": 200
+      }
+    },
+    "count": 1,
+    "within_seconds": 300,
+    "suppression_seconds": 300,
+    "mitre": {
+      "id": "T1078",
+      "name": "Valid Accounts",
+      "tactic": "Initial Access"
+    },
+    "preceded_by": {
+      "match": {
+        "event_type": {
+          "eq": "authentication_failure"
+        }
+      },
+      "count": 10
+    }
+  },
+  {
+    "id": "HOST-001",
+    "name": "SSH authentication failure burst",
+    "severity": "high",
+    "match": {
+      "source_type": {
+        "eq": "auth"
+      },
+      "event_type": {
+        "eq": "authentication_failure"
+      }
+    },
+    "count": 10,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": {
+      "id": "T1110",
+      "name": "Brute Force",
+      "tactic": "Credential Access"
+    },
+    "preceded_by": null
+  },
+  {
+    "id": "IAM-001",
+    "name": "Privileged user created",
+    "severity": "high",
+    "match": {
+      "event_type": {
+        "eq": "privileged_user_created"
+      }
+    },
+    "count": 1,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": {
+      "id": "T1136",
+      "name": "Create Account",
+      "tactic": "Persistence"
+    },
+    "preceded_by": null
+  },
+  {
+    "id": "IAM-002",
+    "name": "User role escalated",
+    "severity": "high",
+    "match": {
+      "event_type": {
+        "eq": "role_escalation"
+      }
+    },
+    "count": 1,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": {
+      "id": "T1098",
+      "name": "Account Manipulation",
+      "tactic": "Persistence"
+    },
+    "preceded_by": null
+  },
+  {
+    "id": "CONTAINER-001",
+    "name": "Container restart loop",
+    "severity": "medium",
+    "match": {
+      "event_type": {
+        "eq": "container_restart"
+      }
+    },
+    "count": 5,
+    "within_seconds": 300,
+    "suppression_seconds": 300,
+    "mitre": null,
+    "preceded_by": null
+  },
+  {
+    "id": "CONTAINER-002",
+    "name": "Privileged container started",
+    "severity": "high",
+    "match": {
+      "event_type": {
+        "eq": "privileged_container_started"
+      }
+    },
+    "count": 1,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": null,
+    "preceded_by": null
+  },
+  {
+    "id": "APP-001",
+    "name": "Application error spike",
+    "severity": "medium",
+    "match": {
+      "event_type": {
+        "eq": "application_error"
+      }
+    },
+    "count": 10,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": null,
+    "preceded_by": null
+  },
+  {
+    "id": "APP-002",
+    "name": "Repeated slow requests",
+    "severity": "low",
+    "match": {
+      "latency_ms": {
+        "gte": 5000
+      }
+    },
+    "count": 10,
+    "within_seconds": 60,
+    "suppression_seconds": 300,
+    "mitre": null,
+    "preceded_by": null
+  }
+]
